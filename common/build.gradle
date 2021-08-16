@@ -1,0 +1,77 @@
+plugins {
+    id 'checkstyle'
+    id 'java'
+    id 'eclipse'
+    id 'org.springframework.boot' version '2.5.3' apply false
+}
+
+apply plugin: 'checkstyle'
+apply plugin: 'java'
+apply plugin: 'io.spring.dependency-management'
+
+description = 'SolarNode STOMP Setup Client: Common'
+version = '0.1.0'
+archivesBaseName = 'solarnode-stomp-setup-client-common'
+
+checkstyle {
+	toolVersion = "${checkstyleVersion}"
+	configFile = rootProject.file('config/checkstyle/checkstyle.xml')
+}
+
+dependencyManagement {
+	imports {
+		mavenBom org.springframework.boot.gradle.plugin.SpringBootPlugin.BOM_COORDINATES
+	}
+}
+
+configurations {
+	all*.exclude group: 'org.apache.commons', module: 'commons-compress'
+	all*.exclude group: 'org.apache.tomcat', module: 'tomcat-jdbc'
+	all*.exclude group: 'org.eclipse.virgo.mirrored'
+	all*.exclude group: 'org.springframework', module: 'spring-messaging'
+	all*.exclude group: 'org.springframework', module: 'spring-websocket'
+	all*.exclude group: 'javax.servlet'
+	all*.exclude group: 'javax.servlet.jsp'
+	all*.exclude group: 'net.sf.supercsv'
+	all*.exclude group: 'net.solarnetwork.common', module: 'net.solarnetwork.common.web'
+	all*.exclude group: 'net.solarnetwork.central', module: 'net.solarnetwork.central.common.security'
+}
+
+dependencies {
+	// Spring
+	implementation 'org.springframework:spring-context'
+	implementation 'org.springframework.security:spring-security-core'
+	
+	// JSON
+	implementation "com.fasterxml.jackson.core:jackson-annotations"
+	implementation "com.fasterxml.jackson.core:jackson-core"
+	implementation "com.fasterxml.jackson.core:jackson-databind"
+	
+	// Netty
+	implementation "io.netty:netty-buffer"
+	implementation "io.netty:netty-codec"
+	implementation "io.netty:netty-codec-stomp"
+	implementation "io.netty:netty-common"
+	implementation "io.netty:netty-handler"
+	implementation "io.netty:netty-resolver"
+	implementation "io.netty:netty-transport"
+
+	// Utilities
+	implementation 'commons-codec:commons-codec'
+	implementation 'org.slf4j:slf4j-api'
+	
+	// Testing
+	testImplementation 'ch.qos.logback:logback-classic'
+}
+
+eclipse {
+	project {
+		natures 'net.sf.eclipsecs.core.CheckstyleNature'
+		buildCommand 'net.sf.eclipsecs.core.CheckstyleBuilder'
+	}
+}
+
+jar.manifest {
+    attributes('Implementation-Version': version)
+}
+

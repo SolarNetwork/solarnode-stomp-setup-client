@@ -1,0 +1,1 @@
+ :: SolarNode STOMP Setup Client :: (${application.version})
