@@ -1,5 +1,5 @@
 /* ==================================================================
- * SetupServiceConfig.java - 9/08/2021 11:37:36 AM
+ * StompSetupClientFactory.java - 17/08/2021 10:04:54 AM
  * 
  * Copyright 2021 SolarNetwork Foundation
  * 
@@ -20,27 +20,26 @@
  * ==================================================================
  */
 
-package net.solarnetwork.node.setup.stomp.client.cli.app.config;
-
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
-
-import net.solarnetwork.node.setup.stomp.client.impl.NettyStompSetupClientFactory;
-import net.solarnetwork.node.setup.stomp.client.impl.StompSetupClientService;
-import net.solarnetwork.node.setup.stomp.client.service.SetupClientService;
+package net.solarnetwork.node.setup.stomp.client.service;
 
 /**
- * Configuration for the STOMP setup client.
+ * Factory API for STOMP setup clients.
  * 
  * @author matt
  * @version 1.0
  */
-@Configuration
-public class SetupServiceConfig {
+@FunctionalInterface
+public interface StompSetupClientFactory {
 
-  @Bean
-  public SetupClientService setupClientService() {
-    return new StompSetupClientService(new NettyStompSetupClientFactory());
-  }
+  /**
+   * Create the client.
+   * 
+   * @param host
+   *          the host to connect to
+   * @param port
+   *          the port to connect to
+   * @return the client, never {@literal null}
+   */
+  StompSetupClient createClient(String host, int port);
 
 }

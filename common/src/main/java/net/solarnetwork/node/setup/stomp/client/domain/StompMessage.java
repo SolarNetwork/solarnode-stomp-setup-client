@@ -24,6 +24,8 @@ package net.solarnetwork.node.setup.stomp.client.domain;
 
 import org.springframework.util.MultiValueMap;
 
+import net.solarnetwork.node.setup.stomp.StompCommand;
+
 /**
  * API for a STOMP message.
  * 
@@ -39,7 +41,7 @@ public interface StompMessage<T> {
    * 
    * @return the command
    */
-  String getCommand();
+  StompCommand getCommand();
 
   /**
    * Get the message headers.

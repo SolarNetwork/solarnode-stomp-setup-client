@@ -22,6 +22,11 @@
 
 package net.solarnetwork.node.setup.stomp.client.service;
 
+import java.util.Collection;
+import java.util.Set;
+
+import net.solarnetwork.domain.datum.GeneralDatum;
+
 /**
  * High-level API for a SolarNode setup client.
  * 
@@ -55,5 +60,15 @@ public interface SetupClientService {
    * @return {@literal true} if the client is connected to a setup server
    */
   boolean isConnected();
+
+  /**
+   * Get the latest available datum.
+   * 
+   * @param sourceIdFilter
+   *          optional source ID filter or {@literal null} for all available datum; can use
+   *          Ant-style patterns
+   * @return the latest available datum, never {@literal null}
+   */
+  Collection<GeneralDatum> latestDatum(Set<String> sourceIdFilter);
 
 }

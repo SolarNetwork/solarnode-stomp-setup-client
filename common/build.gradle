@@ -28,8 +28,11 @@ configurations {
 	all*.exclude group: 'org.apache.commons', module: 'commons-compress'
 	all*.exclude group: 'org.apache.tomcat', module: 'tomcat-jdbc'
 	all*.exclude group: 'org.eclipse.virgo.mirrored'
+	all*.exclude group: 'org.quartz-scheduler'
+	all*.exclude group: 'org.springframework', module: 'spring-jdbc'
 	all*.exclude group: 'org.springframework', module: 'spring-messaging'
 	all*.exclude group: 'org.springframework', module: 'spring-websocket'
+	all*.exclude group: 'org.springframework', module: 'spring-tx'
 	all*.exclude group: 'javax.servlet'
 	all*.exclude group: 'javax.servlet.jsp'
 	all*.exclude group: 'net.sf.supercsv'
@@ -59,6 +62,11 @@ dependencies {
 	// Utilities
 	implementation 'commons-codec:commons-codec'
 	implementation 'org.slf4j:slf4j-api'
+	
+	// SolarNetwork
+	implementation 'net.solarnetwork.common:net.solarnetwork.common:1.78.0'
+	implementation 'net.solarnetwork.node:net.solarnetwork.node:1.89.0'
+	implementation 'net.solarnetwork.node:net.solarnetwork.node.setup.stomp:1.0.0'
 	
 	// Testing
 	testImplementation 'ch.qos.logback:logback-classic'

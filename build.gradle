@@ -1,3 +1,31 @@
+// the following is included to work with local Ivy repo during SN development
+// see https://docs.gradle.org/current/userguide/variant_model.html#sub:ivy-mapping-to-variants
+abstract class IvyVariantDerivationRule implements ComponentMetadataRule {
+    @Inject abstract ObjectFactory getObjects()
+
+    void execute(ComponentMetadataContext context) {
+        // This filters out any non Ivy module
+        if(context.getDescriptor(IvyModuleDescriptor) == null) {
+            return
+        }
+
+        context.details.addVariant("runtimeElements", "runtime") {
+            attributes {
+                attribute(LibraryElements.LIBRARY_ELEMENTS_ATTRIBUTE, getObjects().named(LibraryElements, LibraryElements.JAR))
+                attribute(Category.CATEGORY_ATTRIBUTE, getObjects().named(Category, Category.LIBRARY))
+                attribute(Usage.USAGE_ATTRIBUTE, getObjects().named(Usage, Usage.JAVA_RUNTIME))
+            }
+        }
+        context.details.addVariant("apiElements", "compile") {
+            attributes {
+                attribute(LibraryElements.LIBRARY_ELEMENTS_ATTRIBUTE, getObjects().named(LibraryElements, LibraryElements.JAR))
+                attribute(Category.CATEGORY_ATTRIBUTE, getObjects().named(Category, Category.LIBRARY))
+                attribute(Usage.USAGE_ATTRIBUTE, getObjects().named(Usage, Usage.JAVA_API))
+            }
+        }
+    }
+}
+
 buildscript {
     repositories {
         mavenLocal()
@@ -17,8 +45,14 @@ subprojects {
 
     repositories {
         mavenCentral()
-        mavenLocal()
         maven { url "https://dev.solarnetwork.net/archive/repository/solarnetwork-stage/" }
+        ivy {
+        	url "file:///${System.properties['user.home']}/.ivy2/local"
+        	patternLayout {
+	            artifact "[organisation]/[module]/[revision]/[artifact]-[revision](-[classifier]).[ext]"
+	            ivy 	 "[organisation]/[module]/[revision]/[artifact]-[revision](-[classifier]).[ext]"
+        	}
+        }
     }
 
     [
@@ -68,16 +102,19 @@ subprojects {
             // Test dependencies.
             hamcrest: 'org.hamcrest:hamcrest-library:2.2',
             junit: 'org.junit.jupiter:junit-jupiter:5.7.2',
-            mockito: 'org.mockito:mockito-core:3.9.0'
+            mockito: 'org.mockito:mockito-core:3.9.0',
+            mockitoJupiter: 'org.mockito:mockito-junit-jupiter:3.9.0'
         ]
     }
     
     ext['netty.version'] = '4.1.63.Final'
 
     dependencies {
+    	components { all(IvyVariantDerivationRule) }
         testImplementation libraries.junit,
         		libraries.hamcrest,
-                libraries.mockito
+                libraries.mockito,
+                libraries.mockitoJupiter
     }
 
     // Disable JavaDoc doclint on Java 8. It's annoying.

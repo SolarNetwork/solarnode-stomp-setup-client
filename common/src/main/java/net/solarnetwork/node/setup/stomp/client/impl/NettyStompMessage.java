@@ -32,6 +32,7 @@ import org.springframework.util.MultiValueMap;
 import io.netty.buffer.ByteBuf;
 import io.netty.handler.codec.stomp.StompFrame;
 import io.netty.handler.codec.stomp.StompHeaders;
+import net.solarnetwork.node.setup.stomp.StompCommand;
 import net.solarnetwork.node.setup.stomp.client.domain.StompMessage;
 
 /**
@@ -63,8 +64,8 @@ public abstract class NettyStompMessage<T> implements StompMessage<T> {
   }
 
   @Override
-  public String getCommand() {
-    return frame.command().toString();
+  public StompCommand getCommand() {
+    return StompCommand.valueOf(frame.command().toString());
   }
 
   @Override

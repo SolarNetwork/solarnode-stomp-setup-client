@@ -193,7 +193,8 @@ public class NettyStompClient implements StompSetupClient {
       f.completeExceptionally(new RuntimeException("Not connected."));
       return f;
     }
-    DefaultStompFrame msg = new DefaultStompFrame(StompCommand.valueOf(message.getCommand()));
+    DefaultStompFrame msg = new DefaultStompFrame(
+        StompCommand.valueOf(message.getCommand().getValue()));
     if (message.getHeaders() != null) {
       for (java.util.Map.Entry<String, List<String>> e : message.getHeaders().entrySet()) {
         List<String> values = e.getValue();

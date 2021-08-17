@@ -24,12 +24,17 @@ package net.solarnetwork.node.setup.stomp.client.impl;
 
 import static net.solarnetwork.node.setup.stomp.client.domain.BasicStompMessage.stringMessage;
 
-import java.util.concurrent.ArrayBlockingQueue;
-import java.util.concurrent.BlockingQueue;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
 
@@ -41,10 +46,20 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
+import net.solarnetwork.domain.datum.GeneralDatum;
+import net.solarnetwork.node.setup.stomp.SetupHeader;
+import net.solarnetwork.node.setup.stomp.SetupTopic;
+import net.solarnetwork.node.setup.stomp.StompCommand;
+import net.solarnetwork.node.setup.stomp.StompHeader;
 import net.solarnetwork.node.setup.stomp.client.domain.StompMessage;
 import net.solarnetwork.node.setup.stomp.client.service.SetupClientService;
 import net.solarnetwork.node.setup.stomp.client.service.StompSetupClient;
-import net.solarnetwork.node.setup.stomp.client.util.SnsAuthorizationBuilder;
+import net.solarnetwork.node.setup.stomp.client.service.StompSetupClientFactory;
+import net.solarnetwork.security.SnsAuthorizationBuilder;
 
 /**
  * Implementation of {@link SetupClientService} using the STOMP protocol.
@@ -60,32 +75,69 @@ public class StompSetupClientService implements SetupClientService, Consumer<Sto
    */
   public static final int DEFAULT_TIMEOUT_SECONDS = 600; // FIXME: shorten
 
+  /** The topic subscribed to when connecting. */
+  public static final String SETUP_SUBSCRIBE_TOPIC = "/setup/**";
+
+  /** The JSON UTF-8 content type. */
+  public static final String JSON_UTF8_CONTENT_TYPE = "application/json;charset=utf-8";
+
   private static final Logger log = LoggerFactory.getLogger(StompSetupClientService.class);
 
+  private final AtomicInteger ids = new AtomicInteger(0);
+  private final StompSetupClientFactory clientFactory;
   private StompSetupClient stompClient;
   private long timeoutSeconds = DEFAULT_TIMEOUT_SECONDS;
-
-  private final BlockingQueue<StompMessage<String>> queue = new ArrayBlockingQueue<>(1);
+  private ObjectMapper objectMapper = new ObjectMapper();
 
   private Predicate<StompMessage<String>> actionFilter;
   private CompletableFuture<StompMessage<String>> actionFuture;
 
-  private static Predicate<StompMessage<String>> commandFilter(String command) {
+  /**
+   * Constructor.
+   * 
+   * @param clientFactory
+   *          the client factory to use
+   */
+  public StompSetupClientService(StompSetupClientFactory clientFactory) {
+    super();
+    if (clientFactory == null) {
+      throw new IllegalArgumentException("The clientFactory argument must not be null.");
+    }
+    this.clientFactory = clientFactory;
+  }
+
+  private static Predicate<StompMessage<String>> commandFilter(StompCommand command) {
     return (msg) -> {
-      return (msg != null && command.equals(msg.getCommand()));
+      return (msg != null && command == msg.getCommand());
     };
   }
 
-  private static Predicate<StompMessage<String>> sendTopicFilter(String topic) {
+  private static Predicate<StompMessage<String>> messageTopicFilter(String topic) {
     return (msg) -> {
-      return (msg != null && "SEND".equals(msg.getCommand()) && msg.getHeaders() != null
-          && topic.equals(msg.getHeaders().getFirst("destination")));
+      return (msg != null && StompCommand.MESSAGE == msg.getCommand() && msg.getHeaders() != null
+          && topic.equals(msg.getHeaders().getFirst(StompHeader.Destination.getValue())));
     };
+  }
+
+  /**
+   * Get the next ID value from {@link #IDS}, wrapping to {@literal 0} after
+   * {@link Integer#MAX_VALUE}.
+   * 
+   * @return the next ID value
+   */
+  private int nextId() {
+    int result;
+    int next;
+    do {
+      result = ids.get();
+      next = (result < Integer.MAX_VALUE ? result + 1 : 0);
+    } while (!ids.compareAndSet(result, next));
+    return result;
   }
 
   @Override
   public void connect(String host, int port, String username, String password) {
-    NettyStompClient c = null;
+    StompSetupClient c = null;
     try {
       final CompletableFuture<Void> authFuture;
       synchronized (this) {
@@ -96,20 +148,21 @@ public class StompSetupClientService implements SetupClientService, Consumer<Sto
         if (actionFuture != null) {
           throw new RuntimeException("Multiplexed messages not supported.");
         }
-        c = new NettyStompClient(host, port);
+        c = clientFactory.createClient(host, port);
         c.addMessageConsumer(this);
         c.connect().get(timeoutSeconds, TimeUnit.SECONDS);
         stompClient = c;
 
+        final StompSetupClient client = c;
         final CompletableFuture<StompMessage<String>> connFuture = new CompletableFuture<>();
         authFuture = connFuture.thenCompose(msg -> {
           CompletableFuture<Void> f = new CompletableFuture<>();
           MultiValueMap<String, String> headers = msg.getHeaders();
           if (headers == null) {
             f.completeExceptionally(new RuntimeException("No CONNECTED headers."));
-          } else if (!"bcrypt".equals(headers.getFirst("auth-hash"))) {
-            f.completeExceptionally(new RuntimeException(
-                "Unsupported auth-hash value: " + headers.getFirst("auth-hash")));
+          } else if (!"bcrypt".equals(headers.getFirst(SetupHeader.AuthHash.getValue()))) {
+            f.completeExceptionally(new RuntimeException("Unsupported auth-hash value: "
+                + headers.getFirst(SetupHeader.AuthHash.getValue())));
           } else if (headers.getFirst("auth-hash-param-salt") == null) {
             f.completeExceptionally(new RuntimeException("Missing auth-hash-param-salt header."));
           } else {
@@ -117,8 +170,8 @@ public class StompSetupClientService implements SetupClientService, Consumer<Sto
             String secret = DigestUtils.sha256Hex(BCrypt.hashpw(password, salt));
             // @formatter:off
             SnsAuthorizationBuilder authBuilder = new SnsAuthorizationBuilder(username)
-                .verb("SEND")
-                .path("/setup/authenticate");
+                .verb(StompCommand.SEND.getValue())
+                .path(SetupTopic.Authenticate.getValue());
             // @formatter:on
             String authHeader = authBuilder.build(secret);
             String dateHeader = authBuilder.headerValue("date");
@@ -126,25 +179,19 @@ public class StompSetupClientService implements SetupClientService, Consumer<Sto
             authHeaders.set("authorization", authHeader);
             authHeaders.set("date", dateHeader);
             authHeaders.set("destination", "/setup/authenticate");
-
-            final StompSetupClient client = this.stompClient;
-            if (client == null) {
-              f.completeExceptionally(new RuntimeException("Connection closed."));
-            } else {
-              try {
-                client.post(stringMessage("SEND", authHeaders, null)).get(timeoutSeconds,
-                    TimeUnit.SECONDS);
-                f.complete(null);
-              } catch (InterruptedException | ExecutionException | TimeoutException e) {
-                log.error("Error posting authentication message", e);
-                f.completeExceptionally(e);
-              }
-            }
+            postAndWait(client, StompCommand.SEND, authHeaders, null, f);
           }
+          return f;
+        }).thenCompose(Void -> {
+          CompletableFuture<Void> f = new CompletableFuture<>();
+          MultiValueMap<String, String> headers = new LinkedMultiValueMap<>(2);
+          headers.set(StompHeader.Destination.getValue(), SETUP_SUBSCRIBE_TOPIC);
+          headers.set(StompHeader.Id.getValue(), String.valueOf(nextId()));
+          postAndWait(client, StompCommand.SUBSCRIBE, headers, null, f);
           return f;
         });
         this.actionFuture = connFuture;
-        this.actionFilter = commandFilter("CONNECTED");
+        this.actionFilter = commandFilter(StompCommand.CONNECTED);
       }
 
       // CONNECT
@@ -152,13 +199,14 @@ public class StompSetupClientService implements SetupClientService, Consumer<Sto
       headers.set("accept-version", "1.2");
       headers.set("host", host);
       headers.set("login", username);
-      c.post(stringMessage("CONNECT", headers, null)).get(timeoutSeconds, TimeUnit.SECONDS);
+      c.post(stringMessage(StompCommand.CONNECT, headers, null)).get(timeoutSeconds,
+          TimeUnit.SECONDS);
 
       authFuture.get(timeoutSeconds, TimeUnit.SECONDS);
     } catch (InterruptedException | ExecutionException | TimeoutException e) {
       if (c != null) {
         try {
-          c.shutdown();
+          c.disconnect();
         } catch (Exception e2) {
           // ignore
         }
@@ -200,6 +248,79 @@ public class StompSetupClientService implements SetupClientService, Consumer<Sto
     }
   }
 
+  @Override
+  public Collection<GeneralDatum> latestDatum(Set<String> sourceIdFilter) {
+    String body = null;
+    if (sourceIdFilter != null && !sourceIdFilter.isEmpty()) {
+      try {
+        body = objectMapper.writeValueAsString(sourceIdFilter);
+      } catch (JsonProcessingException e) {
+        throw new RuntimeException(e);
+      }
+    }
+
+    final List<GeneralDatum> result = new ArrayList<>();
+    final CompletableFuture<StompMessage<String>> future = new CompletableFuture<>();
+    try {
+      sendForMessage("/setup/datum/latest", new LinkedMultiValueMap<>(2), body,
+          JSON_UTF8_CONTENT_TYPE, future).get(timeoutSeconds, TimeUnit.SECONDS);
+      StompMessage<String> response = future.get(timeoutSeconds, TimeUnit.SECONDS);
+
+      // response body should be JSON array of objects, objects being GeneralDatum
+      JsonNode json = objectMapper.readTree(response.getBody());
+      for (JsonNode n : json) {
+        if (!n.isObject()) {
+          continue;
+        }
+        GeneralDatum datum = objectMapper.treeToValue(n, GeneralDatum.class);
+        if (datum != null) {
+          result.add(datum);
+        }
+      }
+      return result;
+    } catch (InterruptedException | ExecutionException | TimeoutException | IOException e) {
+      throw new RuntimeException(e);
+    }
+  }
+
+  private Future<?> sendForMessage(String topic, MultiValueMap<String, String> headers, String body,
+      String contentType, CompletableFuture<StompMessage<String>> actionFuture) {
+    final StompSetupClient c = this.stompClient;
+    if (c == null || !c.isConnected()) {
+      throw new RuntimeException("Not connected.");
+    }
+    headers.set("destination", topic);
+    if (body != null) {
+      headers.set("content-type", contentType);
+      headers.set("content-length", String.valueOf(body.length()));
+    }
+    synchronized (this) {
+      this.actionFuture = actionFuture;
+      this.actionFilter = messageTopicFilter(topic);
+      return c.post(stringMessage(StompCommand.SEND, headers, body));
+    }
+  }
+
+  private void postAndWait(StompCommand command, MultiValueMap<String, String> headers, String body,
+      CompletableFuture<Void> postFuture) {
+    final StompSetupClient c = this.stompClient;
+    if (c == null || !c.isConnected()) {
+      throw new RuntimeException("Not connected.");
+    }
+    postAndWait(c, command, headers, body, postFuture);
+  }
+
+  private void postAndWait(StompSetupClient c, StompCommand command,
+      MultiValueMap<String, String> headers, String body, CompletableFuture<Void> postFuture) {
+    try {
+      c.post(stringMessage(command, headers, body)).get(timeoutSeconds, TimeUnit.SECONDS);
+      postFuture.complete(null);
+    } catch (InterruptedException | ExecutionException | TimeoutException e) {
+      log.error("Error posting {} message", command, e);
+      postFuture.completeExceptionally(e);
+    }
+  }
+
   /**
    * Get the message timeout value.
    * 
@@ -217,6 +338,30 @@ public class StompSetupClientService implements SetupClientService, Consumer<Sto
    */
   public void setTimeoutSeconds(long timeoutSeconds) {
     this.timeoutSeconds = timeoutSeconds;
+  }
+
+  /**
+   * Get the object mapper.
+   * 
+   * @return the object mapper, never {@literal null}
+   */
+  public ObjectMapper getObjectMapper() {
+    return objectMapper;
+  }
+
+  /**
+   * Set the object mapper.
+   * 
+   * @param objectMapper
+   *          the object mapper to set
+   * @throws IllegalArgumentException
+   *           if {@code objectMapper} is {@literal null}
+   */
+  public void setObjectMapper(ObjectMapper objectMapper) {
+    if (objectMapper == null) {
+      throw new IllegalArgumentException("The objectMapper argument must not be null.");
+    }
+    this.objectMapper = objectMapper;
   }
 
 }

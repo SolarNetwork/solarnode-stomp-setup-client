@@ -1,5 +1,5 @@
 /* ==================================================================
- * AuthorizationUtilsTests.java - 13/08/2021 3:15:06 PM
+ * NettyStompSetupClientFactory.java - 17/08/2021 10:07:04 AM
  * 
  * Copyright 2021 SolarNetwork Foundation
  * 
@@ -20,40 +20,22 @@
  * ==================================================================
  */
 
-package net.solarnetwork.node.setup.stomp.client.util.test;
+package net.solarnetwork.node.setup.stomp.client.impl;
 
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.is;
-
-import java.time.Instant;
-import java.time.LocalDateTime;
-import java.time.ZoneOffset;
-import java.util.concurrent.TimeUnit;
-
-import org.junit.jupiter.api.Test;
-
-import net.solarnetwork.node.setup.stomp.client.util.AuthorizationUtils;
+import net.solarnetwork.node.setup.stomp.client.service.StompSetupClient;
+import net.solarnetwork.node.setup.stomp.client.service.StompSetupClientFactory;
 
 /**
- * Test cases for the {@link AuthorizationUtils} class.
+ * Netty implementation of {@link StompSetupClientFactory}.
  * 
  * @author matt
  * @version 1.0
  */
-public class AuthorizationUtilsTests {
+public class NettyStompSetupClientFactory implements StompSetupClientFactory {
 
-  @Test
-  public void formatTimestamp_instant() {
-    // GIVEN
-    LocalDateTime date = LocalDateTime.of(2021, 8, 13, 13, 55, 12,
-        (int) TimeUnit.MILLISECONDS.toNanos(123));
-    Instant ts = date.toInstant(ZoneOffset.UTC);
-
-    // WHEN
-    String result = AuthorizationUtils.AUTHORIZATION_TIMESTAMP_FORMATTER.format(ts);
-
-    // THEN
-    assertThat("Instant is formatted", result, is("Fri, 13 Aug 2021 13:55:12 GMT"));
+  @Override
+  public StompSetupClient createClient(String host, int port) {
+    return new NettyStompClient(host, port);
   }
 
 }

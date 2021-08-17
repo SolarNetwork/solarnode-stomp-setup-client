@@ -26,6 +26,8 @@ import java.nio.charset.Charset;
 
 import org.springframework.util.MultiValueMap;
 
+import net.solarnetwork.node.setup.stomp.StompCommand;
+
 /**
  * Basic STOMP message.
  * 
@@ -34,7 +36,7 @@ import org.springframework.util.MultiValueMap;
  */
 public abstract class BasicStompMessage<T> implements StompMessage<T> {
 
-  private final String command;
+  private final StompCommand command;
   private final MultiValueMap<String, String> headers;
 
   /**
@@ -47,7 +49,7 @@ public abstract class BasicStompMessage<T> implements StompMessage<T> {
    * @throws IllegalArgumentException
    *           if {@code command} is {@literal null}
    */
-  protected BasicStompMessage(String command, MultiValueMap<String, String> headers) {
+  protected BasicStompMessage(StompCommand command, MultiValueMap<String, String> headers) {
     super();
     if (command == null) {
       throw new IllegalArgumentException("The command argument must not be null.");
@@ -57,7 +59,7 @@ public abstract class BasicStompMessage<T> implements StompMessage<T> {
   }
 
   @Override
-  public String getCommand() {
+  public StompCommand getCommand() {
     return command;
   }
 
@@ -79,9 +81,25 @@ public abstract class BasicStompMessage<T> implements StompMessage<T> {
    * @throws IllegalArgumentException
    *           if {@code command} is {@literal null}
    */
-  public static StompMessage<String> stringMessage(String command,
+  public static StompMessage<String> stringMessage(StompCommand command,
       MultiValueMap<String, String> headers, String body) {
     return new StringStompMessage(command, headers, body);
+  }
+
+  /**
+   * Create a new string STOMP message without a body.
+   * 
+   * @param command
+   *          the command
+   * @param headers
+   *          the headers
+   * @return the new message
+   * @throws IllegalArgumentException
+   *           if {@code command} is {@literal null}
+   */
+  public static StompMessage<String> stringMessage(StompCommand command,
+      MultiValueMap<String, String> headers) {
+    return stringMessage(command, headers, null);
   }
 
   /**
@@ -103,7 +121,8 @@ public abstract class BasicStompMessage<T> implements StompMessage<T> {
      * @throws IllegalArgumentException
      *           if {@code command} is {@literal null}
      */
-    public StringStompMessage(String command, MultiValueMap<String, String> headers, String body) {
+    public StringStompMessage(StompCommand command, MultiValueMap<String, String> headers,
+        String body) {
       super(command, headers);
       this.body = body;
     }
