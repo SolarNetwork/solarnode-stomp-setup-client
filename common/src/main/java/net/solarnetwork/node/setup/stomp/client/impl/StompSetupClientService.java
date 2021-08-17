@@ -176,9 +176,9 @@ public class StompSetupClientService implements SetupClientService, Consumer<Sto
             String authHeader = authBuilder.build(secret);
             String dateHeader = authBuilder.headerValue("date");
             MultiValueMap<String, String> authHeaders = new LinkedMultiValueMap<>(2);
-            authHeaders.set("authorization", authHeader);
-            authHeaders.set("date", dateHeader);
-            authHeaders.set("destination", "/setup/authenticate");
+            authHeaders.set(SetupHeader.Authorization.getValue(), authHeader);
+            authHeaders.set(SetupHeader.Date.getValue(), dateHeader);
+            authHeaders.set(StompHeader.Destination.getValue(), "/setup/authenticate");
             postAndWait(client, StompCommand.SEND, authHeaders, null, f);
           }
           return f;
@@ -196,9 +196,9 @@ public class StompSetupClientService implements SetupClientService, Consumer<Sto
 
       // CONNECT
       MultiValueMap<String, String> headers = new LinkedMultiValueMap<>(2);
-      headers.set("accept-version", "1.2");
-      headers.set("host", host);
-      headers.set("login", username);
+      headers.set(StompHeader.AcceptVersion.getValue(), "1.2");
+      headers.set(StompHeader.Host.getValue(), host);
+      headers.set(StompHeader.Login.getValue(), username);
       c.post(stringMessage(StompCommand.CONNECT, headers, null)).get(timeoutSeconds,
           TimeUnit.SECONDS);
 
@@ -262,7 +262,7 @@ public class StompSetupClientService implements SetupClientService, Consumer<Sto
     final List<GeneralDatum> result = new ArrayList<>();
     final CompletableFuture<StompMessage<String>> future = new CompletableFuture<>();
     try {
-      sendForMessage("/setup/datum/latest", new LinkedMultiValueMap<>(2), body,
+      sendForMessage(SetupTopic.DatumLatest.getValue(), new LinkedMultiValueMap<>(2), body,
           JSON_UTF8_CONTENT_TYPE, future).get(timeoutSeconds, TimeUnit.SECONDS);
       StompMessage<String> response = future.get(timeoutSeconds, TimeUnit.SECONDS);
 
@@ -289,10 +289,10 @@ public class StompSetupClientService implements SetupClientService, Consumer<Sto
     if (c == null || !c.isConnected()) {
       throw new RuntimeException("Not connected.");
     }
-    headers.set("destination", topic);
+    headers.set(StompHeader.Destination.getValue(), topic);
     if (body != null) {
-      headers.set("content-type", contentType);
-      headers.set("content-length", String.valueOf(body.length()));
+      headers.set(StompHeader.ContentType.getValue(), contentType);
+      headers.set(StompHeader.ContentLength.getValue(), String.valueOf(body.length()));
     }
     synchronized (this) {
       this.actionFuture = actionFuture;

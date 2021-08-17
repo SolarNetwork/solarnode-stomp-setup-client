@@ -137,7 +137,7 @@ public class StompSetupClientServiceTests {
       public Future<?> answer(InvocationOnMock invocation) throws Throwable {
         // "async" CONNECTED message reply
         MultiValueMap<String, String> headers = new LinkedMultiValueMap<>();
-        headers.add("auth-hash", "bcrypt");
+        headers.add(SetupHeader.AuthHash.getValue(), "bcrypt");
         headers.add("auth-hash-param-salt", salt);
         StompMessage<String> connected = stringMessage(StompCommand.CONNECTED, headers);
         service.accept(connected);
@@ -210,9 +210,10 @@ public class StompSetupClientServiceTests {
       public Future<?> answer(InvocationOnMock invocation) throws Throwable {
         final String json = mapper.writeValueAsString(datum);
         MultiValueMap<String, String> headers = new LinkedMultiValueMap<>();
-        headers.add("destination", "/setup/datum/latest");
-        headers.add("content-type", StompSetupClientService.JSON_UTF8_CONTENT_TYPE);
-        headers.add("content-length", String.valueOf(json.length()));
+        headers.add(StompHeader.Destination.getValue(), SetupTopic.DatumLatest.getValue());
+        headers.add(StompHeader.ContentType.getValue(),
+            StompSetupClientService.JSON_UTF8_CONTENT_TYPE);
+        headers.add(StompHeader.ContentLength.getValue(), String.valueOf(json.length()));
 
         StompMessage<String> reply = stringMessage(StompCommand.MESSAGE, headers, json);
         service.accept(reply);
