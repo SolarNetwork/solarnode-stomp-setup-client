@@ -60,7 +60,7 @@ public abstract class NettyStompMessage<T> implements StompMessage<T> {
     if (frame == null) {
       throw new IllegalArgumentException("The frame argument must not be null.");
     }
-    this.frame = frame;
+    this.frame = frame.copy();
   }
 
   @Override
