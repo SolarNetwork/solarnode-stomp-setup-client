@@ -25,6 +25,12 @@ package net.solarnetwork.node.setup.stomp.client.cli.app.config;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.module.SimpleModule;
+
+import net.solarnetwork.codec.BasicGeneralDatumDeserializer;
+import net.solarnetwork.codec.BasicGeneralDatumSerializer;
+import net.solarnetwork.domain.datum.GeneralDatum;
 import net.solarnetwork.node.setup.stomp.client.impl.NettyStompSetupClientFactory;
 import net.solarnetwork.node.setup.stomp.client.impl.StompSetupClientService;
 import net.solarnetwork.node.setup.stomp.client.service.SetupClientService;
@@ -38,9 +44,25 @@ import net.solarnetwork.node.setup.stomp.client.service.SetupClientService;
 @Configuration
 public class SetupServiceConfig {
 
+  private ObjectMapper objectMapper() {
+    ObjectMapper mapper = new ObjectMapper();
+    SimpleModule mod = new SimpleModule("Test");
+    mod.addSerializer(GeneralDatum.class, BasicGeneralDatumSerializer.INSTANCE);
+    mod.addDeserializer(GeneralDatum.class, BasicGeneralDatumDeserializer.INSTANCE);
+    mapper.registerModule(mod);
+    return mapper;
+  }
+
+  /**
+   * Create the setup client service.
+   * 
+   * @return the service
+   */
   @Bean
   public SetupClientService setupClientService() {
-    return new StompSetupClientService(new NettyStompSetupClientFactory());
+    StompSetupClientService s = new StompSetupClientService(new NettyStompSetupClientFactory());
+    s.setObjectMapper(objectMapper());
+    return s;
   }
 
 }
