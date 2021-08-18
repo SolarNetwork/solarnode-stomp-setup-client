@@ -23,6 +23,7 @@
 package net.solarnetwork.node.setup.stomp.client.impl;
 
 import static net.solarnetwork.node.setup.stomp.client.domain.BasicStompMessage.stringMessage;
+import static net.solarnetwork.util.NumberUtils.getAndIncrementWithWrap;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -119,22 +120,6 @@ public class StompSetupClientService implements SetupClientService, Consumer<Sto
     };
   }
 
-  /**
-   * Get the next ID value from {@link #IDS}, wrapping to {@literal 0} after
-   * {@link Integer#MAX_VALUE}.
-   * 
-   * @return the next ID value
-   */
-  private int nextId() {
-    int result;
-    int next;
-    do {
-      result = ids.get();
-      next = (result < Integer.MAX_VALUE ? result + 1 : 0);
-    } while (!ids.compareAndSet(result, next));
-    return result;
-  }
-
   @Override
   public void connect(String host, int port, String username, String password) {
     StompSetupClient c = null;
@@ -186,7 +171,7 @@ public class StompSetupClientService implements SetupClientService, Consumer<Sto
           CompletableFuture<Void> f = new CompletableFuture<>();
           MultiValueMap<String, String> headers = new LinkedMultiValueMap<>(2);
           headers.set(StompHeader.Destination.getValue(), SETUP_SUBSCRIBE_TOPIC);
-          headers.set(StompHeader.Id.getValue(), String.valueOf(nextId()));
+          headers.set(StompHeader.Id.getValue(), String.valueOf(getAndIncrementWithWrap(ids, 0)));
           postAndWait(client, StompCommand.SUBSCRIBE, headers, null, f);
           return f;
         });
