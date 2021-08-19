@@ -114,10 +114,14 @@ public class NettyStompClient implements StompSetupClient {
       future.addListener((ChannelFutureListener) f -> {
         if (f.isSuccess()) {
           NettyStompClient.this.channel = f.channel();
+          NettyStompClient.this.channel.closeFuture().addListener(closeFuture -> {
+            shutdown();
+          });
         } else {
           Throwable t = f.cause();
           log.error("Error connecting to STOMP setup server {}:{}: {}", this, host, port,
               (t != null ? t.toString() : "?"));
+          shutdown();
         }
       });
       return future;
