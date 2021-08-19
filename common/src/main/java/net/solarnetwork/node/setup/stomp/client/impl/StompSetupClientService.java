@@ -56,6 +56,7 @@ import net.solarnetwork.node.setup.stomp.SetupHeader;
 import net.solarnetwork.node.setup.stomp.SetupTopic;
 import net.solarnetwork.node.setup.stomp.StompCommand;
 import net.solarnetwork.node.setup.stomp.StompHeader;
+import net.solarnetwork.node.setup.stomp.client.domain.Message;
 import net.solarnetwork.node.setup.stomp.client.domain.StompMessage;
 import net.solarnetwork.node.setup.stomp.client.service.SetupClientService;
 import net.solarnetwork.node.setup.stomp.client.service.StompSetupClient;
@@ -235,22 +236,10 @@ public class StompSetupClientService implements SetupClientService, Consumer<Sto
 
   @Override
   public Collection<GeneralDatum> latestDatum(Set<String> sourceIdFilter) {
-    String body = null;
-    if (sourceIdFilter != null && !sourceIdFilter.isEmpty()) {
-      try {
-        body = objectMapper.writeValueAsString(sourceIdFilter);
-      } catch (JsonProcessingException e) {
-        throw new RuntimeException(e);
-      }
-    }
-
+    final Message<String> response = executeCommand(SetupTopic.DatumLatest.getValue(), null,
+        sourceIdFilter);
     final List<GeneralDatum> result = new ArrayList<>();
-    final CompletableFuture<StompMessage<String>> future = new CompletableFuture<>();
     try {
-      sendForMessage(SetupTopic.DatumLatest.getValue(), new LinkedMultiValueMap<>(2), body,
-          JSON_UTF8_CONTENT_TYPE, future).get(timeoutSeconds, TimeUnit.SECONDS);
-      StompMessage<String> response = future.get(timeoutSeconds, TimeUnit.SECONDS);
-
       // response body should be JSON array of objects, objects being GeneralDatum
       JsonNode json = objectMapper.readTree(response.getBody());
       for (JsonNode n : json) {
@@ -263,7 +252,37 @@ public class StompSetupClientService implements SetupClientService, Consumer<Sto
         }
       }
       return result;
-    } catch (InterruptedException | ExecutionException | TimeoutException | IOException e) {
+    } catch (IOException e) {
+      throw new RuntimeException(e);
+    }
+  }
+
+  @Override
+  public Message<String> executeCommand(String service, MultiValueMap<String, String> headers,
+      Object body) {
+    String bodyString = null;
+    String contentType = null;
+    if (body instanceof CharSequence) {
+      bodyString = body.toString();
+      contentType = "text/plain;charset=utf-8";
+    } else if (body != null) {
+      try {
+        bodyString = objectMapper.writeValueAsString(body);
+        contentType = JSON_UTF8_CONTENT_TYPE;
+      } catch (JsonProcessingException e) {
+        throw new RuntimeException(e);
+      }
+    }
+    MultiValueMap<String, String> sendHeaders = new LinkedMultiValueMap<>();
+    if (headers != null) {
+      sendHeaders.putAll(headers);
+    }
+    final CompletableFuture<StompMessage<String>> future = new CompletableFuture<>();
+    try {
+      sendForMessage(service, sendHeaders, bodyString, contentType, future).get(timeoutSeconds,
+          TimeUnit.SECONDS);
+      return future.get(timeoutSeconds, TimeUnit.SECONDS);
+    } catch (InterruptedException | ExecutionException | TimeoutException e) {
       throw new RuntimeException(e);
     }
   }

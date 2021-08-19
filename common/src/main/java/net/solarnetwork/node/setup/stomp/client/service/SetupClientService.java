@@ -25,7 +25,10 @@ package net.solarnetwork.node.setup.stomp.client.service;
 import java.util.Collection;
 import java.util.Set;
 
+import org.springframework.util.MultiValueMap;
+
 import net.solarnetwork.domain.datum.GeneralDatum;
+import net.solarnetwork.node.setup.stomp.client.domain.Message;
 
 /**
  * High-level API for a SolarNode setup client.
@@ -70,5 +73,19 @@ public interface SetupClientService {
    * @return the latest available datum, never {@literal null}
    */
   Collection<GeneralDatum> latestDatum(Set<String> sourceIdFilter);
+
+  /**
+   * Execute an arbitrary command.
+   * 
+   * @param service
+   *          the setup service to execute
+   * @param headers
+   *          the headers
+   * @param body
+   *          the body content
+   * @return the result message
+   */
+  Message<String> executeCommand(String service, MultiValueMap<String, String> headers,
+      Object body);
 
 }

@@ -1,5 +1,5 @@
 /* ==================================================================
- * StompMessage.java - 16/08/2021 3:20:35 PM
+ * Message.java - 20/08/2021 10:04:32 AM
  * 
  * Copyright 2021 SolarNetwork Foundation
  * 
@@ -22,23 +22,37 @@
 
 package net.solarnetwork.node.setup.stomp.client.domain;
 
-import net.solarnetwork.node.setup.stomp.StompCommand;
+import org.springframework.util.MultiValueMap;
 
 /**
- * API for a STOMP message.
+ * A basic message.
  * 
  * @param <T>
  *          the body content type
  * @author matt
  * @version 1.0
  */
-public interface StompMessage<T> extends Message<T> {
+public interface Message<T> {
 
   /**
-   * Get the STOMP command.
+   * Get the message headers.
    * 
-   * @return the command
+   * @return the headers, or {@literal null} if none
    */
-  StompCommand getCommand();
+  MultiValueMap<String, String> getHeaders();
+
+  /**
+   * Get the body content.
+   * 
+   * @return the body content
+   */
+  T getBody();
+
+  /**
+   * Get the raw body content.
+   * 
+   * @return the raw body content
+   */
+  byte[] getContent();
 
 }

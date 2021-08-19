@@ -30,6 +30,10 @@ import org.springframework.shell.table.TableBuilder;
 import org.springframework.shell.table.TableModel;
 
 import net.solarnetwork.domain.datum.GeneralDatum;
+import net.solarnetwork.node.setup.stomp.SetupHeader;
+import net.solarnetwork.node.setup.stomp.SetupStatus;
+import net.solarnetwork.node.setup.stomp.StompHeader;
+import net.solarnetwork.node.setup.stomp.client.domain.Message;
 import net.solarnetwork.util.StringUtils;
 
 /**
@@ -70,6 +74,41 @@ public final class ShellUtils {
     tableBuilder.addFullBorder(BorderStyle.fancy_light);
 
     return tableBuilder.build().render(100);
+  }
+
+  /**
+   * Render a response message.
+   * 
+   * @param response
+   *          the response message to render
+   * @return the message as a string
+   */
+  public static String renderResponseMessage(Message<String> response) {
+    String status = SetupStatus.Ok.toString().toUpperCase();
+    if (response.getHeaders().containsKey(SetupHeader.Status.getValue())) {
+      try {
+        SetupStatus s = SetupStatus.forCode(
+            Integer.parseInt(response.getHeaders().getFirst(SetupHeader.Status.getValue())));
+        status = s.toString().toUpperCase();
+      } catch (IllegalArgumentException e) {
+        status = response.getHeaders().getFirst(SetupHeader.Status.getValue());
+      }
+    }
+
+    StringBuilder buf = new StringBuilder();
+    buf.append("Result: ").append(status);
+
+    String message = response.getHeaders().getFirst(StompHeader.Message.getValue());
+    if (message != null) {
+      buf.append(" (").append(message).append(")");
+    }
+
+    String content = response.getBody();
+    if (content != null) {
+      buf.append("\n").append(content);
+    }
+
+    return buf.toString();
   }
 
 }
