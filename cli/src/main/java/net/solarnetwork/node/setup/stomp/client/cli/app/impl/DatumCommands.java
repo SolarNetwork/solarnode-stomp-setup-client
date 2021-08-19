@@ -79,8 +79,8 @@ public class DatumCommands {
    *          an optional source ID filter to use
    * @return the connection result
    */
-  @ShellMethod(key = "latest", value = "Get the latest datum.")
-  public String latestDatum(@ShellOption(value = "filter", defaultValue = "",
+  @ShellMethod(key = "datum-latest", value = "Get the latest datum.")
+  public String datumLatest(@ShellOption(value = "filter", defaultValue = "",
       help = "A source ID filter (Ant-style wild cards allowd).") String sourceIdFilter) {
     Set<String> sourceIdsFilter = StringUtils.commaDelimitedStringToSet(sourceIdFilter);
     Collection<GeneralDatum> datum = setupService.latestDatum(sourceIdsFilter);
