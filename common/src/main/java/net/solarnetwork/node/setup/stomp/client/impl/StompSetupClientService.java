@@ -286,15 +286,6 @@ public class StompSetupClientService implements SetupClientService, Consumer<Sto
     }
   }
 
-  private void postAndWait(StompCommand command, MultiValueMap<String, String> headers, String body,
-      CompletableFuture<Void> postFuture) {
-    final StompSetupClient c = this.stompClient;
-    if (c == null || !c.isConnected()) {
-      throw new RuntimeException("Not connected.");
-    }
-    postAndWait(c, command, headers, body, postFuture);
-  }
-
   private void postAndWait(StompSetupClient c, StompCommand command,
       MultiValueMap<String, String> headers, String body, CompletableFuture<Void> postFuture) {
     try {
