@@ -33,7 +33,7 @@ import org.springframework.shell.standard.ShellMethod;
 import org.springframework.shell.standard.ShellMethodAvailability;
 import org.springframework.shell.standard.ShellOption;
 
-import net.solarnetwork.domain.datum.GeneralDatum;
+import net.solarnetwork.domain.datum.Datum;
 import net.solarnetwork.node.setup.stomp.client.service.SetupClientService;
 import net.solarnetwork.util.StringUtils;
 
@@ -83,7 +83,7 @@ public class DatumCommands {
   public String datumLatest(@ShellOption(value = "filter", defaultValue = "",
       help = "A source ID filter (Ant-style wild cards allowd).") String sourceIdFilter) {
     Set<String> sourceIdsFilter = StringUtils.commaDelimitedStringToSet(sourceIdFilter);
-    Collection<GeneralDatum> datum = setupService.latestDatum(sourceIdsFilter);
+    Collection<Datum> datum = setupService.latestDatum(sourceIdsFilter);
     return ShellUtils.renderDatumTable(datum);
   }
 

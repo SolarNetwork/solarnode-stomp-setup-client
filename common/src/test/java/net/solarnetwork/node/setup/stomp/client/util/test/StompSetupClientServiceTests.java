@@ -58,11 +58,10 @@ import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.module.SimpleModule;
 
-import net.solarnetwork.codec.BasicGeneralDatumDeserializer;
-import net.solarnetwork.codec.BasicGeneralDatumSerializer;
-import net.solarnetwork.domain.GeneralDatumSamples;
+import net.solarnetwork.codec.JsonUtils;
+import net.solarnetwork.domain.datum.Datum;
+import net.solarnetwork.domain.datum.DatumSamples;
 import net.solarnetwork.domain.datum.GeneralDatum;
 import net.solarnetwork.node.setup.stomp.SetupHeader;
 import net.solarnetwork.node.setup.stomp.SetupTopic;
@@ -103,12 +102,7 @@ public class StompSetupClientServiceTests {
   @BeforeEach
   public void setup() {
     service = new StompSetupClientService(clientFactory);
-
-    mapper = new ObjectMapper();
-    SimpleModule mod = new SimpleModule("Test");
-    mod.addSerializer(GeneralDatum.class, BasicGeneralDatumSerializer.INSTANCE);
-    mod.addDeserializer(GeneralDatum.class, BasicGeneralDatumDeserializer.INSTANCE);
-    mapper.registerModule(mod);
+    mapper = JsonUtils.newDatumObjectMapper();
     service.setObjectMapper(mapper);
   }
 
@@ -194,14 +188,16 @@ public class StompSetupClientServiceTests {
     List<GeneralDatum> datum = new ArrayList<>();
     LocalDateTime date = LocalDateTime.of(2021, 8, 17, 14, 28, 12,
         (int) TimeUnit.MILLISECONDS.toNanos(345));
-    GeneralDatumSamples s = new GeneralDatumSamples();
+    DatumSamples s = new DatumSamples();
     s.putInstantaneousSampleValue("a", 1);
     s.putAccumulatingSampleValue("b", 2);
-    datum.add(new net.solarnetwork.domain.GeneralDatum("s1", date.toInstant(ZoneOffset.UTC), s));
-    s = new GeneralDatumSamples();
+    datum.add(
+        new net.solarnetwork.domain.datum.GeneralDatum("s1", date.toInstant(ZoneOffset.UTC), s));
+    s = new DatumSamples();
     s.putInstantaneousSampleValue("A", 3);
     s.putAccumulatingSampleValue("B", 4);
-    datum.add(new net.solarnetwork.domain.GeneralDatum("s2", date.toInstant(ZoneOffset.UTC), s));
+    datum.add(
+        new net.solarnetwork.domain.datum.GeneralDatum("s2", date.toInstant(ZoneOffset.UTC), s));
 
     Future doneFuture = CompletableFuture.completedFuture(null);
     given(client.post(postCaptor.capture())).willAnswer(new Answer<Future<?>>() {
@@ -222,7 +218,7 @@ public class StompSetupClientServiceTests {
     });
 
     // WHEN
-    Collection<GeneralDatum> result = service.latestDatum(Collections.singleton("/**"));
+    Collection<Datum> result = service.latestDatum(Collections.singleton("/**"));
 
     // THEN
     assertThat("Two datum returned", result, hasSize(2));

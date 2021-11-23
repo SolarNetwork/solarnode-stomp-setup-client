@@ -27,7 +27,7 @@ import java.util.Set;
 
 import org.springframework.util.MultiValueMap;
 
-import net.solarnetwork.domain.datum.GeneralDatum;
+import net.solarnetwork.domain.datum.Datum;
 import net.solarnetwork.node.setup.stomp.client.domain.Message;
 
 /**
@@ -72,7 +72,7 @@ public interface SetupClientService {
    *          Ant-style patterns
    * @return the latest available datum, never {@literal null}
    */
-  Collection<GeneralDatum> latestDatum(Set<String> sourceIdFilter);
+  Collection<Datum> latestDatum(Set<String> sourceIdFilter);
 
   /**
    * Execute an arbitrary command.

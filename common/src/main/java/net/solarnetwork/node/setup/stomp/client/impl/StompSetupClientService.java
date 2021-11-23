@@ -51,7 +51,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-import net.solarnetwork.domain.datum.GeneralDatum;
+import net.solarnetwork.domain.datum.Datum;
 import net.solarnetwork.node.setup.stomp.SetupHeader;
 import net.solarnetwork.node.setup.stomp.SetupTopic;
 import net.solarnetwork.node.setup.stomp.StompCommand;
@@ -235,10 +235,10 @@ public class StompSetupClientService implements SetupClientService, Consumer<Sto
   }
 
   @Override
-  public Collection<GeneralDatum> latestDatum(Set<String> sourceIdFilter) {
+  public Collection<Datum> latestDatum(Set<String> sourceIdFilter) {
     final Message<String> response = executeCommand(SetupTopic.DatumLatest.getValue(), null,
         sourceIdFilter);
-    final List<GeneralDatum> result = new ArrayList<>();
+    final List<Datum> result = new ArrayList<>();
     try {
       // response body should be JSON array of objects, objects being GeneralDatum
       JsonNode json = objectMapper.readTree(response.getBody());
@@ -246,7 +246,7 @@ public class StompSetupClientService implements SetupClientService, Consumer<Sto
         if (!n.isObject()) {
           continue;
         }
-        GeneralDatum datum = objectMapper.treeToValue(n, GeneralDatum.class);
+        Datum datum = objectMapper.treeToValue(n, Datum.class);
         if (datum != null) {
           result.add(datum);
         }

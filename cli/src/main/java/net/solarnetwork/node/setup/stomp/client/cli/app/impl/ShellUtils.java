@@ -29,7 +29,7 @@ import org.springframework.shell.table.BorderStyle;
 import org.springframework.shell.table.TableBuilder;
 import org.springframework.shell.table.TableModel;
 
-import net.solarnetwork.domain.datum.GeneralDatum;
+import net.solarnetwork.domain.datum.Datum;
 import net.solarnetwork.node.setup.stomp.SetupHeader;
 import net.solarnetwork.node.setup.stomp.SetupStatus;
 import net.solarnetwork.node.setup.stomp.StompHeader;
@@ -55,10 +55,10 @@ public final class ShellUtils {
    *          the list
    * @return a table
    */
-  public static String renderDatumTable(Collection<GeneralDatum> list) {
+  public static String renderDatumTable(Collection<Datum> list) {
     Object[][] data = new Object[list.size()][];
     int i = 0;
-    for (GeneralDatum d : list) {
+    for (Datum d : list) {
       // @formatter:off
       data[i] = new Object[] {
           d.getSourceId(),

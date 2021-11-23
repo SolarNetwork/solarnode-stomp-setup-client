@@ -64,9 +64,9 @@ dependencies {
 	implementation 'org.slf4j:slf4j-api'
 	
 	// SolarNetwork
-	api 'net.solarnetwork.common:net.solarnetwork.common:1.78.0'
-	api 'net.solarnetwork.node:net.solarnetwork.node:1.89.0'
-	api 'net.solarnetwork.node:net.solarnetwork.node.setup.stomp:1.0.0'
+	api 'net.solarnetwork.common:net.solarnetwork.common:2.1.0'
+	api 'net.solarnetwork.node:net.solarnetwork.node:2.1.0'
+	api 'net.solarnetwork.node:net.solarnetwork.node.setup.stomp:2.0.1'
 	
 	// Testing
 	testImplementation 'ch.qos.logback:logback-classic'
